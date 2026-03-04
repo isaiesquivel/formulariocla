@@ -186,22 +186,16 @@ function addSignatureArea(doc: jsPDF, y: number, ml: number) {
   const ph = doc.internal.pageSize.getHeight();
   const signY = Math.max(y + 20, ph - 45);
 
-  const positions = [
-    { x: ml + 20, label: "FIRMA" },
-    { x: pw / 2 - 30, label: "FIRMA" },
-    { x: pw - ml - 80, label: "FIRMA" },
-  ];
+  const signX = pw / 2 - 30;
 
-  positions.forEach((pos) => {
-    // Sign line
-    doc.setDrawColor(...SIGN_LINE);
-    doc.setLineWidth(0.3);
-    doc.line(pos.x, signY, pos.x + 60, signY);
+  // Sign line
+  doc.setDrawColor(...SIGN_LINE);
+  doc.setLineWidth(0.3);
+  doc.line(signX, signY, signX + 60, signY);
 
-    // Label
-    setFont(doc, "sign");
-    doc.text(pos.label, pos.x + 30, signY + 5, { align: "center", charSpace: 0.8 });
-  });
+  // Label
+  setFont(doc, "sign");
+  doc.text("FIRMA", signX + 30, signY + 5, { align: "center", charSpace: 0.8 });
 }
 
 // ── Footer ─────────────────────────────────────────────────
