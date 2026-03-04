@@ -240,8 +240,8 @@ export default function AdminPanel() {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    label={({ short, percent }) =>
-                      `${short} ${(percent * 100).toFixed(0)}%`
+                    label={({ short, value }) =>
+                      `${short}: ${value}`
                     }
                     labelLine={true}
                   >
@@ -251,11 +251,6 @@ export default function AdminPanel() {
                   </Pie>
                   <Tooltip
                     formatter={(value, name) => [`${value} solicitud(es)`, name]}
-                  />
-                  <Legend
-                    formatter={(value) => (
-                      <span className="text-xs text-foreground">{value}</span>
-                    )}
                   />
                 </PieChart>
               </ResponsiveContainer>
