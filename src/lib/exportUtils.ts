@@ -187,9 +187,9 @@ function addSignatureArea(doc: jsPDF, y: number, ml: number) {
   const signY = Math.max(y + 20, ph - 45);
 
   const positions = [
-    { x: ml + 20, label: "FIRMA DEL PADRE / TUTOR" },
-    { x: pw / 2 - 30, label: "FIRMA DEL DIRECTOR(A)" },
-    { x: pw - ml - 80, label: "SELLO DEL PLANTEL" },
+    { x: ml + 20, label: "FIRMA" },
+    { x: pw / 2 - 30, label: "FIRMA" },
+    { x: pw - ml - 80, label: "FIRMA" },
   ];
 
   positions.forEach((pos) => {
