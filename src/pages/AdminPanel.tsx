@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSubmissions, deleteSubmission, getConsentBlob } from "@/lib/storage";
+import { getSubmissions, deleteSubmission } from "@/lib/storage";
 import { BecaFormData } from "@/types/BecaForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import {
-  LogOut, Eye, Trash2, RefreshCw, Users, FileDown, FileSpreadsheet,
-  FileText, Search, X, BarChart2, FileImage,
-} from "lucide-react";
+import { LogOut, Eye, Trash2, RefreshCw, Users, FileDown, FileSpreadsheet, FileText, Search, X, ChartBar as BarChart2, FileImage } from "lucide-react";
 import { exportToPDF, exportToExcel, exportSinglePDF } from "@/lib/exportUtils";
 import logoColegio from "@/assets/logo-colegio.png";
 import {
@@ -150,12 +147,7 @@ export default function AdminPanel() {
       toast({ title: "Sin consentimiento", description: "Esta solicitud no tiene un archivo adjunto.", variant: "destructive" });
       return;
     }
-    const b64 = await getConsentBlob(s.id);
-    if (!b64) {
-      toast({ title: "Archivo no encontrado", description: "El archivo no está disponible en este dispositivo.", variant: "destructive" });
-      return;
-    }
-    setConsentPreview({ nombre, b64 });
+    toast({ title: "Funcionalidad deshabilitada", description: "La visualización de archivos de consentimiento no está disponible actualmente.", variant: "destructive" });
   };
 
   // Determinar el tipo MIME a partir del nombre de archivo

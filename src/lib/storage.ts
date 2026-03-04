@@ -1,216 +1,172 @@
-/**
- * storage.ts
- * API de persistencia usando SQLite (sql.js + IndexedDB).
- * El PDF de consentimiento se almacena en IndexedDB por ser un blob grande;
- * en SQLite solo se guarda el nombre del archivo.
- */
 import { BecaFormData } from '@/types/BecaForm';
-import { getDB, persistDB } from './database';
-import { initDB } from './db-init';
+import { supabase } from '@/integrations/supabase/client';
 
-async function ensureInit() {
-  await initDB();
-}
-
-// ─── IndexedDB: almacén de blobs de consentimiento ────────────────────────────
-
-const CONSENT_IDB = 'becas_consents';
-const CONSENT_STORE = 'files';
-
-function openConsentIDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(CONSENT_IDB, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(CONSENT_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function saveConsentBlob(id: string, b64: string): Promise<void> {
-  if (!b64) return;
-  const idb = await openConsentIDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = idb.transaction(CONSENT_STORE, 'readwrite');
-    const req = tx.objectStore(CONSENT_STORE).put(b64, id);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-    tx.oncomplete = () => idb.close();
-  });
-}
-
-export async function getConsentBlob(id: string): Promise<string | null> {
-  const idb = await openConsentIDB();
-  return new Promise((resolve, reject) => {
-    const tx = idb.transaction(CONSENT_STORE, 'readonly');
-    const req = tx.objectStore(CONSENT_STORE).get(id);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => reject(req.error);
-    tx.oncomplete = () => idb.close();
-  });
-}
-
-async function deleteConsentBlob(id: string): Promise<void> {
-  const idb = await openConsentIDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = idb.transaction(CONSENT_STORE, 'readwrite');
-    tx.objectStore(CONSENT_STORE).delete(id);
-    tx.oncomplete = () => { idb.close(); resolve(); };
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-// ─── Columnas SQLite (sin el blob b64) ───────────────────────────────────────
-const COLUMNS = [
-  'id', 'timestamp', 'cicloEscolar', 'tipoApoyo', 'refrendo', 'porcentajeBeca',
-  'alumnoApellidoPaterno', 'alumnoApellidoMaterno', 'alumnoNombres',
-  'alumnoFechaNacimiento', 'alumnoCURP', 'alumnoDomicilio', 'alumnoCiudad',
-  'alumnoEstado', 'alumnoCP', 'alumnoNivelEducativo', 'alumnoGrado',
-  'padreApellidoPaterno', 'padreApellidoMaterno', 'padreNombres',
-  'padreFechaNacimiento', 'padreViveConAlumno', 'padreDomicilio',
-  'padreTelefono', 'padreCorreo', 'padrePuesto', 'padreLugarTrabajo',
-  'padreDomicilioTrabajo', 'padreIngresoMensual', 'padreIngresosAdicionales',
-  'padreIngresosPensiones', 'padreIngresosExtras',
-  'madreApellidoPaterno', 'madreApellidoMaterno', 'madreNombres',
-  'madreFechaNacimiento', 'madreViveConAlumno', 'madreDomicilio',
-  'madreTelefono', 'madreCorreo', 'madrePuesto', 'madreLugarTrabajo',
-  'madreDomicilioTrabajo', 'madreIngresoMensual', 'madreIngresosAdicionales',
-  'madreIngresosPensiones', 'madreIngresosExtras',
-  'estadoCivil', 'numIntegrantes', 'miembros',
-  'alimentacion', 'rentaHipoteca', 'servicios', 'transporte', 'educacion',
-  'salud', 'deudasCreditos', 'recreacion', 'totalIngresosFamiliares',
-  'tipoVivienda', 'propiedadesAdicionales', 'conformidad',
-  'consentimientoNombre',
-] as const;
-
-function rowToFormData(row: Record<string, unknown>): BecaFormData & { consentimientoNombre: string } {
+function mapToFormData(row: any): BecaFormData & { consentimientoNombre: string } {
   return {
     id: String(row.id ?? ''),
     timestamp: String(row.timestamp ?? ''),
-    cicloEscolar: String(row.cicloEscolar ?? ''),
-    tipoApoyo: String(row.tipoApoyo ?? ''),
+    cicloEscolar: String(row.cicloescolar ?? ''),
+    tipoApoyo: String(row.tipoapoyo ?? ''),
     refrendo: String(row.refrendo ?? ''),
-    porcentajeBeca: String(row.porcentajeBeca ?? ''),
-    alumnoApellidoPaterno: String(row.alumnoApellidoPaterno ?? ''),
-    alumnoApellidoMaterno: String(row.alumnoApellidoMaterno ?? ''),
-    alumnoNombres: String(row.alumnoNombres ?? ''),
-    alumnoFechaNacimiento: String(row.alumnoFechaNacimiento ?? ''),
-    alumnoCURP: String(row.alumnoCURP ?? ''),
-    alumnoDomicilio: String(row.alumnoDomicilio ?? ''),
-    alumnoCiudad: String(row.alumnoCiudad ?? ''),
-    alumnoEstado: String(row.alumnoEstado ?? ''),
-    alumnoCP: String(row.alumnoCP ?? ''),
-    alumnoNivelEducativo: String(row.alumnoNivelEducativo ?? ''),
-    alumnoGrado: String(row.alumnoGrado ?? ''),
-    padreApellidoPaterno: String(row.padreApellidoPaterno ?? ''),
-    padreApellidoMaterno: String(row.padreApellidoMaterno ?? ''),
-    padreNombres: String(row.padreNombres ?? ''),
-    padreFechaNacimiento: String(row.padreFechaNacimiento ?? ''),
-    padreViveConAlumno: String(row.padreViveConAlumno ?? ''),
-    padreDomicilio: String(row.padreDomicilio ?? ''),
-    padreTelefono: String(row.padreTelefono ?? ''),
-    padreCorreo: String(row.padreCorreo ?? ''),
-    padrePuesto: String(row.padrePuesto ?? ''),
-    padreLugarTrabajo: String(row.padreLugarTrabajo ?? ''),
-    padreDomicilioTrabajo: String(row.padreDomicilioTrabajo ?? ''),
-    padreIngresoMensual: String(row.padreIngresoMensual ?? ''),
-    padreIngresosAdicionales: String(row.padreIngresosAdicionales ?? ''),
-    padreIngresosPensiones: String(row.padreIngresosPensiones ?? ''),
-    padreIngresosExtras: String(row.padreIngresosExtras ?? ''),
-    madreApellidoPaterno: String(row.madreApellidoPaterno ?? ''),
-    madreApellidoMaterno: String(row.madreApellidoMaterno ?? ''),
-    madreNombres: String(row.madreNombres ?? ''),
-    madreFechaNacimiento: String(row.madreFechaNacimiento ?? ''),
-    madreViveConAlumno: String(row.madreViveConAlumno ?? ''),
-    madreDomicilio: String(row.madreDomicilio ?? ''),
-    madreTelefono: String(row.madreTelefono ?? ''),
-    madreCorreo: String(row.madreCorreo ?? ''),
-    madrePuesto: String(row.madrePuesto ?? ''),
-    madreLugarTrabajo: String(row.madreLugarTrabajo ?? ''),
-    madreDomicilioTrabajo: String(row.madreDomicilioTrabajo ?? ''),
-    madreIngresoMensual: String(row.madreIngresoMensual ?? ''),
-    madreIngresosAdicionales: String(row.madreIngresosAdicionales ?? ''),
-    madreIngresosPensiones: String(row.madreIngresosPensiones ?? ''),
-    madreIngresosExtras: String(row.madreIngresosExtras ?? ''),
-    estadoCivil: String(row.estadoCivil ?? ''),
-    numIntegrantes: String(row.numIntegrantes ?? ''),
-    miembros: (() => {
-      try { return JSON.parse(String(row.miembros ?? '[]')); } catch { return []; }
-    })(),
+    porcentajeBeca: String(row.porcentajebeca ?? ''),
+    alumnoApellidoPaterno: String(row.alumnoapellidopaterno ?? ''),
+    alumnoApellidoMaterno: String(row.alumnoapellidomaterno ?? ''),
+    alumnoNombres: String(row.alumnonombres ?? ''),
+    alumnoFechaNacimiento: String(row.alumnofechanacimiento ?? ''),
+    alumnoCURP: String(row.alumnocurp ?? ''),
+    alumnoDomicilio: String(row.alumnodomicilio ?? ''),
+    alumnoCiudad: String(row.alumnociudad ?? ''),
+    alumnoEstado: String(row.alumnoestado ?? ''),
+    alumnoCP: String(row.alumnocp ?? ''),
+    alumnoNivelEducativo: String(row.alumnoniveleducativo ?? ''),
+    alumnoGrado: String(row.alumnogrado ?? ''),
+    padreApellidoPaterno: String(row.padreapellidopaterno ?? ''),
+    padreApellidoMaterno: String(row.padreapellidomaterno ?? ''),
+    padreNombres: String(row.padrenombres ?? ''),
+    padreFechaNacimiento: String(row.padrefechanacimiento ?? ''),
+    padreViveConAlumno: String(row.padreviveconalumno ?? ''),
+    padreDomicilio: String(row.padredomicilio ?? ''),
+    padreTelefono: String(row.padretelefono ?? ''),
+    padreCorreo: String(row.padrecorreo ?? ''),
+    padrePuesto: String(row.padrepuesto ?? ''),
+    padreLugarTrabajo: String(row.padrelugartrabajo ?? ''),
+    padreDomicilioTrabajo: String(row.padredomiciliotrabajo ?? ''),
+    padreIngresoMensual: String(row.padreingresomensual ?? ''),
+    padreIngresosAdicionales: String(row.padreingresosadicionales ?? ''),
+    padreIngresosPensiones: String(row.padreingresospensiones ?? ''),
+    padreIngresosExtras: String(row.padreingresosextras ?? ''),
+    madreApellidoPaterno: String(row.madreapellidopaterno ?? ''),
+    madreApellidoMaterno: String(row.madreapellidomaterno ?? ''),
+    madreNombres: String(row.madrenombres ?? ''),
+    madreFechaNacimiento: String(row.madrefechanacimiento ?? ''),
+    madreViveConAlumno: String(row.madreviveconalumno ?? ''),
+    madreDomicilio: String(row.madredomicilio ?? ''),
+    madreTelefono: String(row.madretelefono ?? ''),
+    madreCorreo: String(row.madrecorreo ?? ''),
+    madrePuesto: String(row.madrepuesto ?? ''),
+    madreLugarTrabajo: String(row.madrelugartrabajo ?? ''),
+    madreDomicilioTrabajo: String(row.madredomiciliotrabajo ?? ''),
+    madreIngresoMensual: String(row.madreingresomensual ?? ''),
+    madreIngresosAdicionales: String(row.madreingresosadicionales ?? ''),
+    madreIngresosPensiones: String(row.madreingresospensiones ?? ''),
+    madreIngresosExtras: String(row.madreingresosextras ?? ''),
+    estadoCivil: String(row.estadocivil ?? ''),
+    numIntegrantes: String(row.numintegrantes ?? ''),
+    miembros: Array.isArray(row.miembros) ? row.miembros : [],
     alimentacion: String(row.alimentacion ?? ''),
-    rentaHipoteca: String(row.rentaHipoteca ?? ''),
+    rentaHipoteca: String(row.rentahipoteca ?? ''),
     servicios: String(row.servicios ?? ''),
     transporte: String(row.transporte ?? ''),
     educacion: String(row.educacion ?? ''),
     salud: String(row.salud ?? ''),
-    deudasCreditos: String(row.deudasCreditos ?? ''),
+    deudasCreditos: String(row.deudascreditos ?? ''),
     recreacion: String(row.recreacion ?? ''),
-    totalIngresosFamiliares: String(row.totalIngresosFamiliares ?? ''),
-    tipoVivienda: String(row.tipoVivienda ?? ''),
-    propiedadesAdicionales: String(row.propiedadesAdicionales ?? ''),
-    conformidad: Number(row.conformidad) === 1,
-    becaRecomendacionActiva: row.becaRecomendacionActiva === 1 || row.becaRecomendacionActiva === true,
-    numMiembrosRecomendacion: String(row.numMiembrosRecomendacion ?? ''),
-    miembrosRecomendacion: (() => {
-      try { return JSON.parse(String(row.miembrosRecomendacion ?? '[]')); } catch { return []; }
-    })(),
-    consentimientoNombre: String(row.consentimientoNombre ?? ''),
+    totalIngresosFamiliares: String(row.totalingresosfamiliares ?? ''),
+    tipoVivienda: String(row.tipovivienda ?? ''),
+    propiedadesAdicionales: String(row.propiedadesadicionales ?? ''),
+    conformidad: Boolean(row.conformidad),
+    becaRecomendacionActiva: Boolean(row.becarecomendacionactiva),
+    numMiembrosRecomendacion: String(row.nummiembrosrecomendacion ?? ''),
+    miembrosRecomendacion: Array.isArray(row.miembrosrecomendacion) ? row.miembrosrecomendacion : [],
+    consentimientoNombre: String(row.consentimientonombre ?? ''),
   };
 }
-
-// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function saveSubmission(
   data: BecaFormData & { consentimientoNombre?: string; consentimientoB64?: string }
 ): Promise<void> {
-  await ensureInit();
-  const db = await getDB();
-
-  const id = crypto.randomUUID();
-  const ts = new Date().toISOString();
-
-  const b64 = data.consentimientoB64 ?? '';
-  if (b64) await saveConsentBlob(id, b64);
-
-  // Build a keyed map with overrides for generated/serialized fields
-  const dataMap: Record<string, unknown> = {
-    ...(data as unknown as Record<string, unknown>),
-    id,
-    timestamp: ts,
-    miembros: JSON.stringify((data as any).miembros ?? []),
-    conformidad: data.conformidad ? 1 : 0,
-    consentimientoNombre: data.consentimientoNombre ?? '',
-  };
-
-  // Pick values in exact COLUMNS order — guarantees no index mismatch
-  const values = COLUMNS.map((col) => {
-    const v = dataMap[col];
-    return v === undefined ? null : v;
+  const { error } = await supabase.from('solicitudes').insert({
+    cicloescolar: data.cicloEscolar,
+    tipoapoyo: data.tipoApoyo,
+    refrendo: data.refrendo,
+    porcentajebeca: data.porcentajeBeca,
+    alumnoapellidopaterno: data.alumnoApellidoPaterno,
+    alumnoapellidomaterno: data.alumnoApellidoMaterno,
+    alumnonombres: data.alumnoNombres,
+    alumnofechanacimiento: data.alumnoFechaNacimiento,
+    alumnocurp: data.alumnoCURP,
+    alumnodomicilio: data.alumnoDomicilio,
+    alumnociudad: data.alumnoCiudad,
+    alumnoestado: data.alumnoEstado,
+    alumnocp: data.alumnoCP,
+    alumnoniveleducativo: data.alumnoNivelEducativo,
+    alumnogrado: data.alumnoGrado,
+    padreapellidopaterno: data.padreApellidoPaterno,
+    padreapellidomaterno: data.padreApellidoMaterno,
+    padrenombres: data.padreNombres,
+    padrefechanacimiento: data.padreFechaNacimiento,
+    padreviveconalumno: data.padreViveConAlumno,
+    padredomicilio: data.padreDomicilio,
+    padretelefono: data.padreTelefono,
+    padrecorreo: data.padreCorreo,
+    padrepuesto: data.padrePuesto,
+    padrelugartrabajo: data.padreLugarTrabajo,
+    padredomiciliotrabajo: data.padreDomicilioTrabajo,
+    padreingresomensual: data.padreIngresoMensual,
+    padreingresosadicionales: data.padreIngresosAdicionales,
+    padreingresospensiones: data.padreIngresosPensiones,
+    padreingresosextras: data.padreIngresosExtras,
+    madreapellidopaterno: data.madreApellidoPaterno,
+    madreapellidomaterno: data.madreApellidoMaterno,
+    madrenombres: data.madreNombres,
+    madrefechanacimiento: data.madreFechaNacimiento,
+    madreviveconalumno: data.madreViveConAlumno,
+    madredomicilio: data.madreDomicilio,
+    madretelefono: data.madreTelefono,
+    madrecorreo: data.madreCorreo,
+    madrepuesto: data.madrePuesto,
+    madrelugartrabajo: data.madreLugarTrabajo,
+    madredomiciliotrabajo: data.madreDomicilioTrabajo,
+    madreingresomensual: data.madreIngresoMensual,
+    madreingresosadicionales: data.madreIngresosAdicionales,
+    madreingresospensiones: data.madreIngresosPensiones,
+    madreingresosextras: data.madreIngresosExtras,
+    estadocivil: data.estadoCivil,
+    numintegrantes: data.numIntegrantes,
+    miembros: data.miembros || [],
+    nummiembrosrecomendacion: data.numMiembrosRecomendacion,
+    miembrosrecomendacion: data.miembrosRecomendacion || [],
+    becarecomendacionactiva: data.becaRecomendacionActiva || false,
+    alimentacion: data.alimentacion,
+    rentahipoteca: data.rentaHipoteca,
+    servicios: data.servicios,
+    transporte: data.transporte,
+    educacion: data.educacion,
+    salud: data.salud,
+    deudascreditos: data.deudasCreditos,
+    recreacion: data.recreacion,
+    totalingresosfamiliares: data.totalIngresosFamiliares,
+    tipovivienda: data.tipoVivienda,
+    propiedadesadicionales: data.propiedadesAdicionales,
+    conformidad: data.conformidad,
+    consentimientonombre: data.consentimientoNombre || '',
   });
 
-  const placeholders = COLUMNS.map(() => '?').join(', ');
-  const sql = `INSERT OR REPLACE INTO solicitudes (${COLUMNS.join(', ')}) VALUES (${placeholders})`;
-
-  db.run(sql, values);
-  await persistDB();
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function getSubmissions(): Promise<(BecaFormData & { consentimientoNombre: string })[]> {
-  await ensureInit();
-  const db = await getDB();
-  const results = db.exec('SELECT * FROM solicitudes ORDER BY timestamp DESC');
-  if (!results.length || !results[0].values.length) return [];
-  const { columns, values } = results[0];
-  return values.map((row) => {
-    const obj: Record<string, unknown> = {};
-    columns.forEach((col, i) => { obj[col] = row[i]; });
-    return rowToFormData(obj);
-  });
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .select('*')
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []).map(mapToFormData);
 }
 
 export async function deleteSubmission(id: string): Promise<void> {
-  await ensureInit();
-  const db = await getDB();
-  db.run('DELETE FROM solicitudes WHERE id = ?', [id]);
-  await deleteConsentBlob(id);
-  await persistDB();
+  const { error } = await supabase
+    .from('solicitudes')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
