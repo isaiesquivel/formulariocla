@@ -13,8 +13,7 @@ import { LogOut, Eye, Trash2, RefreshCw, Users, FileDown, FileSpreadsheet, FileT
 import { exportToPDF, exportToExcel, exportSinglePDF } from "@/lib/exportUtils";
 import logoColegio from "@/assets/logo-colegio.png";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 
 const NIVELES = ["Estancia infantil", "Pre maternal", "Maternal", "Jardín de Niños", "Primaria", "Secundaria", "Preparatoria"];
@@ -224,54 +223,23 @@ export default function AdminPanel() {
 
         {/* ── Sección de Gráficas ── */}
         {showCharts && submissions.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Pie chart: distribución por tipo de apoyo */}
+          <div className="grid grid-cols-1 gap-6">
+            {/* Bar chart: distribución por tipo de apoyo */}
             <div className="bg-card rounded-xl shadow p-5">
               <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-primary" />
-                Distribución por Tipo de Apoyo
+                Distribución por Tipo de Beca
               </h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={dataByTipo}
-                    dataKey="value"
-                    nameKey="short"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ short, value }) =>
-                      `${short}: ${value}`
-                    }
-                    labelLine={true}
-                  >
-                    {dataByTipo.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [`${value} solicitud(es)`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Bar chart apilado: tipos de apoyo por nivel educativo */}
-            <div className="bg-card rounded-xl shadow p-5">
-              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-primary" />
-                Tipos de Apoyo por Nivel Educativo
-              </h3>
-              {dataByNivel.length === 0 ? (
+              {dataByTipo.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-16">Sin datos</p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={dataByNivel} margin={{ top: 4, right: 8, left: -16, bottom: 60 }}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={dataByTipo} margin={{ top: 4, right: 8, left: -16, bottom: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis
-                      dataKey="nivel"
+                      dataKey="short"
                       tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      angle={-35}
+                      angle={-45}
                       textAnchor="end"
                       interval={0}
                     />
@@ -286,39 +254,16 @@ export default function AdminPanel() {
                         borderRadius: 8,
                         fontSize: 12,
                       }}
+                      formatter={(value, name) => [`${value} solicitud(es)`, "Cantidad"]}
                     />
-                    <Legend
-                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                    <Bar
+                      dataKey="value"
+                      fill="#2563eb"
+                      radius={[4, 4, 0, 0]}
                     />
-                    {tiposUnicos.map((tipo, i) => (
-                      <Bar
-                        key={tipo}
-                        dataKey={tipo}
-                        stackId="a"
-                        fill={COLORS[i % COLORS.length]}
-                        radius={i === tiposUnicos.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                      />
-                    ))}
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </div>
-
-            {/* Resumen de totales por nivel */}
-            <div className="bg-card rounded-xl shadow p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Resumen por Nivel Educativo</h3>
-              <div className="flex flex-wrap gap-3">
-                {NIVELES.map((nivel) => {
-                  const count = submissions.filter((s) => s.alumnoNivelEducativo === nivel).length;
-                  if (count === 0) return null;
-                  return (
-                    <div key={nivel} className="bg-primary/10 rounded-lg px-4 py-2 text-center">
-                      <p className="text-xs text-muted-foreground">{nivel}</p>
-                      <p className="text-xl font-bold text-primary">{count}</p>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         )}
