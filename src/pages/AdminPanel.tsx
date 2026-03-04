@@ -71,8 +71,17 @@ export default function AdminPanel() {
   }, [navigate]);
 
   const refresh = async () => {
-    const data = await getSubmissions();
-    setSubmissions(data);
+    try {
+      const data = await getSubmissions();
+      setSubmissions(data);
+    } catch (error: any) {
+      toast({
+        title: "Error al cargar solicitudes",
+        description: error.message,
+        variant: "destructive"
+      });
+      console.error("Error loading submissions:", error);
+    }
   };
 
   const handleDelete = async (id: string) => {
