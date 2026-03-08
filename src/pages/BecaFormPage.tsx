@@ -247,7 +247,7 @@ export default function BecaFormPage() {
                   <SelectContent>{[1, 2, 3, 4, 5, 6].map((g) => <SelectItem key={g} value={String(g)}>{g}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <FormRadioField
                   label="% de beca"
                   field="refrendo"
@@ -263,24 +263,24 @@ export default function BecaFormPage() {
                     }
                   }}
                 />
-                {form.refrendo === "Refrendo" && (
-                  <div className="space-y-1.5">
-                    <Label className="form-field-label">Porcentaje de beca</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={form.porcentajeBeca === '' ? '0' : form.porcentajeBeca}
-                        onChange={(e) => set("porcentajeBeca", e.target.value.replace('%', '').trim())}
-                        className="bg-muted w-28"
-                        placeholder="0"
-                        disabled={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
-                        readOnly={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
-                      />
-                      <span className="text-foreground font-medium">%</span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
+            {form.refrendo === "Refrendo" && (
+              <div className="space-y-1.5">
+                <Label className="form-field-label">Porcentaje de beca</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={form.porcentajeBeca === '' ? '0' : form.porcentajeBeca}
+                    onChange={(e) => set("porcentajeBeca", e.target.value.replace('%', '').trim())}
+                    className="bg-muted w-28"
+                    placeholder="0"
+                    disabled={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
+                    readOnly={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
+                  />
+                  <span className="text-foreground font-medium">%</span>
+                </div>
+              </div>
+            )}
 
           </div>
         );
