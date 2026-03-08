@@ -248,21 +248,41 @@ export default function BecaFormPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <FormRadioField
-                  label="% de beca"
-                  field="refrendo"
-                  options={["Refrendo", "Primera vez"]}
-                  value={form.refrendo as string}
-                  onChange={(val) => {
-                    set("refrendo", val);
-                    if (val === "Refrendo" && form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual) {
-                      set("porcentajeBeca", porcentajeBecaActual);
-                    }
-                    if (val === "Primera vez") {
-                      set("porcentajeBeca", "");
-                    }
-                  }}
-                />
+                <Label className="form-field-label">% de beca</Label>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="refrendo-option"
+                      name="refrendo"
+                      value="Refrendo"
+                      checked={form.refrendo === "Refrendo"}
+                      onChange={(e) => {
+                        set("refrendo", e.target.value);
+                        if (form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual) {
+                          set("porcentajeBeca", porcentajeBecaActual);
+                        }
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="refrendo-option" className="text-sm font-normal cursor-pointer">Refrendo</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="primera-vez-option"
+                      name="refrendo"
+                      value="Primera vez"
+                      checked={form.refrendo === "Primera vez"}
+                      onChange={(e) => {
+                        set("refrendo", e.target.value);
+                        set("porcentajeBeca", "");
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="primera-vez-option" className="text-sm font-normal cursor-pointer">Primera vez</label>
+                  </div>
+                </div>
               </div>
             </div>
             {form.refrendo === "Refrendo" && (
