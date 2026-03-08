@@ -8,7 +8,7 @@ import { BecaFormData, EMPTY_FORM, FamilyMember, RecomendacionMember } from "@/t
 import { FormFieldInput, FormRadioField } from "@/components/form/FormField";
 import { saveSubmission } from "@/lib/storage";
 import { toast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Send, CheckCircle2, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Send, CircleCheck as CheckCircle2, ExternalLink } from "lucide-react";
 import logoColegio from "@/assets/logo-colegio.png";
 
 const STEPS = [
