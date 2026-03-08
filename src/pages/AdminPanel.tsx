@@ -55,6 +55,7 @@ export default function AdminPanel() {
   const [selected, setSelected] = useState<BecaFormData | null>(null);
   const [showCharts, setShowCharts] = useState(false);
   const [consentPreview, setConsentPreview] = useState<{ nombre: string; b64: string } | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Filters
   const [searchName, setSearchName] = useState("");
@@ -83,10 +84,20 @@ export default function AdminPanel() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteSubmission(id);
-    await refresh();
-    toast({ title: "Solicitud eliminada" });
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteSubmission(deleteId);
+      await refresh();
+      toast({ title: "Solicitud eliminada" });
+      setDeleteId(null);
+    } catch (error: any) {
+      toast({
+        title: "Error al eliminar",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const logout = () => {
@@ -366,7 +377,7 @@ export default function AdminPanel() {
                       <Button variant="ghost" size="sm" onClick={() => exportSinglePDF(s)} title="Exportar PDF">
                         <FileText className="w-4 h-4 text-primary" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(s.id)} title="Eliminar">
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteId(s.id)} title="Eliminar">
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -521,6 +532,26 @@ export default function AdminPanel() {
                 Descargar archivo
               </a>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Confirmación de eliminación ── */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar solicitud?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-4">
+            Esta acción no se puede deshacer. La solicitud será eliminada permanentemente.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Eliminar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
