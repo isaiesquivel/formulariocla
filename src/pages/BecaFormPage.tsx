@@ -61,6 +61,8 @@ export default function BecaFormPage() {
   const [form, setForm] = useState<BecaFormData>({ ...EMPTY_FORM });
   const [submitted, setSubmitted] = useState(false);
 
+  const [porcentajeBecaActual, setPorcentajeBecaActual] = useState("");
+
   const set = (field: keyof BecaFormData, value: string | boolean | FamilyMember[] | RecomendacionMember[]) => {
     setForm((p) => ({ ...p, [field]: value }));
   };
@@ -198,8 +200,14 @@ export default function BecaFormPage() {
                 <Label className="form-field-label">Porcentaje de beca actual</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    value={form.porcentajeBeca === '' ? '0' : form.porcentajeBeca}
-                    onChange={(e) => set("porcentajeBeca", e.target.value.replace('%', '').trim())}
+                    value={porcentajeBecaActual === '' ? '0' : porcentajeBecaActual}
+                    onChange={(e) => {
+                      const val = e.target.value.replace('%', '').trim();
+                      setPorcentajeBecaActual(val);
+                      if (form.refrendo === "Refrendo") {
+                        set("porcentajeBeca", val);
+                      }
+                    }}
                     className="bg-background w-28"
                     placeholder="0"
                   />
@@ -245,7 +253,15 @@ export default function BecaFormPage() {
                   field="refrendo"
                   options={["Refrendo", "Primera vez"]}
                   value={form.refrendo as string}
-                  onChange={set}
+                  onChange={(val) => {
+                    set("refrendo", val);
+                    if (val === "Refrendo" && form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual) {
+                      set("porcentajeBeca", porcentajeBecaActual);
+                    }
+                    if (val === "Primera vez") {
+                      set("porcentajeBeca", "");
+                    }
+                  }}
                 />
                 {form.refrendo === "Refrendo" && (
                   <div className="space-y-1.5">
@@ -254,8 +270,10 @@ export default function BecaFormPage() {
                       <Input
                         value={form.porcentajeBeca === '' ? '0' : form.porcentajeBeca}
                         onChange={(e) => set("porcentajeBeca", e.target.value.replace('%', '').trim())}
-                        className="bg-background w-28"
+                        className="bg-muted w-28"
                         placeholder="0"
+                        disabled={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
+                        readOnly={form.tipoApoyo === "Beca Personal CLA — Refrendo" && porcentajeBecaActual !== ""}
                       />
                       <span className="text-foreground font-medium">%</span>
                     </div>
